@@ -1,113 +1,93 @@
-import Image from 'next/image'
+// في الصفحة فيجب ان نجعلها تُعرض من جانب العميل وليس السيرفر useState بما اننا سنقوم بإضافة
+"use client";
+import { useState } from "react";
 
 export default function Home() {
+  /**
+   * عبارة عن مجموعة من الكائنات لمساعدة روبوت المحادثة على تتبع محفوظات محادثته مع مستخدم معين
+   * ستتم إعادة تعيينه عند إعادة التحميل
+   * content و role : كل كائن له خاصيتان
+   */
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content: "مرحباً، كيف يمكننا مساعدتك؟",
+    },
+  ]);
+  // المدخلات التي سيعطيها المستخدم للبوت
+  const [theTextarea, setTheTextarea] = useState("");
+  // OpenAI ستظهر للمستخدم نص اثناء الإنتظار لرد
+  const [isLoading, setIsLoading] = useState(false);
+
+  /**
+   * OpenAI تقوم هذه الدالة بالإتصال برد
+   */
+  const getResponse = async () => {
+    // يظهر للمستخدم انه ما زال البوت يقوم بالرد وعليه الإنتظار حتى ينتهي
+    setIsLoading(true);
+    // فيها messages مصفوفة مؤقتة ووضع جميع عناصر مصفوفة
+    let mess = messages;
+    /**
+     * ندفع مدخلات المستخدم إلى هذه المصفوفة المؤقتة ونضبط رسائلنا
+     * لقد قمنا بفعل هذا لأنه ليس من الجيد دفع البيانات الى المصفوفة الأساسية
+     * فلذلك قمنا بإنشاء مصفوفة مؤقتة
+     */
+    mess.push({ role: "user", content: theTextarea });
+    // نقوم بإرجاع خانة إدخال المحتوى من جاب المستخدم فارغة
+    setTheTextarea("");
+
+    // الخاص بنا الذي لم نقوم بإنشائه بعد API نقوم بإرسال طلب الى
+    const response = await fetch("/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({ messages }),
+    });
+
+    // output نقوم بطلب إرجاع البيانات والمخرجات
+    const data = await response.json();
+    const { output } = data;
+
+    // التي تحتوي ايضاً على بيانات الادخال messages نقوم بإضافة بيانات الاخراج التي ارسلت لنا من البوت الى مصفوفة
+    setMessages((prevMessages) => [...prevMessages, output]);
+    // والتي تعني ان البوت قد انتهى من كتابة رده false نقوم بإرجاعها الى
+    setIsLoading(false);
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main dir="rtl" className="m-2">
+      <div>
+        <div>
+          {/* messages إستدعاء جميع البيانات من مصفوفة */}
+          {messages.map((e) => {
+            return <div key={e.content}>{e.content}</div>
+          })}
+
+          {/* فيظهر للمستخدم بأن البوت ما زال يقوم بالرد true قيمتها isLoading في حال كان */}
+          {isLoading ? <div className="text-red-900">جاري الرد...</div> : ""}
+        </div>
+        {
+          /**
+           * theTextarea لإستقبال البيانات من المستخدم وتخزينها في المتغيرtextarea قمنا بإنشاء خانة
+           * اثناء النقر عليه getResponse ثم قمنا بإنشار زر يتصل بالدالة
+           */
+        }
+        <div className="flex items-center mt-6">
+          <textarea
+            value={theTextarea}
+            onChange={(event) => setTheTextarea(event.target.value)}
+            className="w-72 text-black bg-gray-200 px-2 rouded"
+          />
+          <button
+            onClick={getResponse}
+            className="bg-red-800 text-white mr-5 px-6 py-3 rounded-sm"
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            إرسال
+          </button>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
     </main>
-  )
+  );
 }
